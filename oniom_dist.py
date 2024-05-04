@@ -1,7 +1,6 @@
 import re
 import os
-
-input1 = r'C:\Users\piotr\Documents\working_dirs_lapek\oniom_dist\example_files\cam_6311_lan_S1_qmmm.log'
+from math import sqrt, acos, degrees
 
 class Atom:
     def __init__(self, x:float, y:float, z:float, name:str=None,  at_id:int=None) -> None:
@@ -48,7 +47,13 @@ class Molecule:
         mol_raw = Molecule (atoms=atom_list_raw, mol_id=self.mol_id)
         mol_raw.set_coordinate_type('raw')
         return mol_raw
-
+    def calc_distance(self, at_id1:int, at_id2:int) -> float:
+        dist = distance(self.atoms[at_id1].xyz, self.atoms[at_id2].xyz)
+        return (dist)
+    def calc_angle(self, at_id1:int, at_id2:int, at_id3:int) -> float:
+        ang = degrees(angle(self.atoms[at_id1].xyz, self.atoms[at_id2].xyz, self.atoms[at_id3].xyz))
+        return (ang)
+    
 class Optimization:
     def __init__(self) -> None:
         # molecules as written in input
@@ -78,7 +83,20 @@ class Optimization:
         self.final_mol_raw = self.final_mol_shifted.shifted_to_raw(self.shift_vec)
     def set_map_name_id(self, map_name_id) -> None:
         self.map_name_id = map_name_id
-
+    def get_distance_list(self, at_id1:int, at_id2:int) -> list[float]:
+        all_mols = self.get_mol_list()
+        dists = [mol.calc_distance(at_id1, at_id2) for mol in all_mols]
+        return (dists)
+    def get_angle_list(self, at_id1:int, at_id2:int, at_id3:int) -> list[float]:
+        all_mols = self.get_mol_list()
+        angs = [mol.calc_angle(at_id1, at_id2, at_id3) for mol in all_mols]
+        return (angs)
+    def get_mol_list(self) -> list[Molecule]:
+        all_mols = self.intermediate_mols_shifted
+        all_mols.insert(0, self.initial_mol_shifted)
+        all_mols.append(self.final_mol_shifted)
+        return (all_mols)
+    
 def parse_intermediate_atomic_line(line:str) -> Atom:
     line = line.strip(r'\n')
     at_id = line.split()[0]
@@ -98,7 +116,7 @@ def parse_initial_atomic_line(line:str) -> Atom:
 
 def get_initial_molecule(logfile:os.PathLike) -> Molecule:
     initial_atomic_line = []
-    with open (input1, mode='r') as f:
+    with open (logfile, mode='r') as f:
         for line in f:
             #set iterator is at the start of initial atomic geometry
             if re.findall(r'Symbolic Z-matrix:', line):
@@ -114,7 +132,7 @@ def get_initial_molecule(logfile:os.PathLike) -> Molecule:
     #parse initial molecule atom list and add their ids based on their order (starts at id = 1)
     parsed_initial_atoms = [parse_initial_atomic_line(line) for line in initial_atomic_line]
     for i, atom in enumerate(parsed_initial_atoms):
-        atom.set_id(i+1)
+        atom.set_id(i + 1)
     initial_molecule = Molecule (atoms=parsed_initial_atoms, mol_id=1)
     initial_molecule.set_coordinate_type('raw')
     return (initial_molecule)
@@ -147,7 +165,7 @@ def get_all_molecules(logfile:os.PathLike) -> tuple[Molecule, list[Molecule]]:
     initial_mol = get_initial_molecule(logfile)
     id_name_mapping = (initial_mol.map_name_id())
     molecule_list = []
-    with open (input1, mode='r') as f:
+    with open (logfile, mode='r') as f:
         while cur_molecule := get_next_intermediate_molecule(f, id_name_mapping):
             # add a molecule ID
             cur_molecule.set_id(len(molecule_list) + 1)
@@ -167,6 +185,31 @@ def get_calc(logfile:os.PathLike) -> Optimization:
     calc.set_map_name_id(inital_mol_raw.map_name_id())
     return (calc)
 
+def distance(r1:tuple[float,float,float], r2:tuple[float,float,float]) -> float:
+    return (sqrt((r1[0] - r2[0])**2 + (r1[1] - r2[1])**2 + (r1[2] - r2[2])**2))
+
+def vector_from_points(r1:tuple[float,float,float], r2:tuple[float,float,float]) -> float:
+    return (r2[0] - r1[0], r2[1] - r1[1], r2[2] - r1[2])
+
+def dot_product(v1:tuple[float,float,float], v2:tuple[float,float,float]) -> float:
+    return (sum((a*b) for a, b in zip(v1, v2)))
+
+def vec_length(v:tuple[float,float,float]) -> float:
+    return sqrt(dot_product(v, v))
+
+def angle(r1:tuple[float,float,float], r2:tuple[float,float,float], r3:tuple[float,float,float]) -> float:
+    v1 = vector_from_points(r2, r1)
+    v2 = vector_from_points(r2, r3)
+    return acos(dot_product(v1, v2) / (vec_length(v1) * vec_length(v2)))
+
 if __name__ == '__main__':
+    input1 = r'C:\Users\piotr\Documents\working_dirs_lapek\oniom_dist\example_files\cam_6311_lan_S1_qmmm.log'
+    input2 = r'C:\Users\piotr\Documents\working_dirs_lapek\oniom_dist\example_files\cam_6311_lan_T1_qmmm.log'
     calc1  = get_calc(input1)
-    pass
+    d1 = calc1.get_distance_list(1,31)[-1]
+    a1 = calc1.get_angle_list(5,1,2)[0]
+    calc2  = get_calc(input2)
+    d2 = calc2.get_distance_list(1,31)[-1]
+    a2 = calc2.get_angle_list(5,1,2)[0]
+    print (f'{d1:.3f}', f'{d2:.3f}')
+    print (f'{a1:.3f}', f'{a2:.3f}')
