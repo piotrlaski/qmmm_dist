@@ -11,9 +11,9 @@ class Atom:
         else:
             self.at_id = None
         if name is not None: 
-            self.name = str(at_id)
+            self.name = str(name)
         else:
-            self.name = None        
+            self.name = None  
     def set_id(self, new_id:int) -> None:
         self.at_id = int(new_id)
     def set_name(self, new_name:str) -> None:
@@ -60,11 +60,13 @@ class Optimization:
         self.intermediate_mols_shifted = []
         self.final_mol_shifted = None
         self.shift_vec = None
+        self.map_name_id = None
     def calc_shift_vec(self) -> None:
         mol_raw = self.initial_mol_raw
         mol_shifted = self.initial_mol_shifted
         if not mol_raw and mol_shifted:
             raise ValueError
+        #calculate the general Gaussian to raw vector based on the first atom shift
         atom1_raw = mol_raw.atoms[1]
         atom1_shifted = mol_shifted.atoms[1]
         shift_vec = tuple(coord_raw - coord_shifted for coord_raw, coord_shifted in zip(atom1_raw.xyz, atom1_shifted.xyz))
@@ -74,6 +76,9 @@ class Optimization:
             raise ValueError
         self.intermediate_mols_raw = [mol_sh.shifted_to_raw(self.shift_vec) for mol_sh in self.intermediate_mols_shifted]
         self.final_mol_raw = self.final_mol_shifted.shifted_to_raw(self.shift_vec)
+    def set_map_name_id(self, map_name_id) -> None:
+        self.map_name_id = map_name_id
+
 def parse_intermediate_atomic_line(line:str) -> Atom:
     line = line.strip(r'\n')
     at_id = line.split()[0]
@@ -149,8 +154,9 @@ def get_all_molecules(logfile:os.PathLike) -> tuple[Molecule, list[Molecule]]:
             molecule_list.append(cur_molecule)
     return (initial_mol, molecule_list)
 
-if __name__ == '__main__':
-    inital_mol_raw, all_mols_shifted = get_all_molecules(input1)
+def get_calc(logfile:os.PathLike) -> Optimization:
+    '''fully parses all info in a logfile into a complete Optimiziation instance'''
+    inital_mol_raw, all_mols_shifted = get_all_molecules(logfile)
     calc = Optimization()
     calc.initial_mol_raw = inital_mol_raw
     calc.initial_mol_shifted = all_mols_shifted[0]
@@ -158,4 +164,9 @@ if __name__ == '__main__':
     calc.final_mol_shifted = all_mols_shifted[-1]
     calc.calc_shift_vec()
     calc.calc_mols_raw()
+    calc.set_map_name_id(inital_mol_raw.map_name_id())
+    return (calc)
+
+if __name__ == '__main__':
+    calc1  = get_calc(input1)
     pass
