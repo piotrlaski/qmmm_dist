@@ -1,6 +1,8 @@
 import re
 import os
 from math import sqrt, acos, degrees
+import numpy as np
+import matplotlib.pyplot as plt
 
 class Atom:
     def __init__(self, x:float, y:float, z:float, name:str=None,  at_id:int=None) -> None:
@@ -203,13 +205,48 @@ def angle(r1:tuple[float,float,float], r2:tuple[float,float,float], r3:tuple[flo
     return acos(dot_product(v1, v2) / (vec_length(v1) * vec_length(v2)))
 
 if __name__ == '__main__':
-    input1 = r'C:\Users\piotr\Documents\working_dirs_lapek\oniom_dist\example_files\cam_6311_lan_S1_qmmm.log'
-    input2 = r'C:\Users\piotr\Documents\working_dirs_lapek\oniom_dist\example_files\cam_6311_lan_T1_qmmm.log'
+    input1 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_S0_qmmm.log'
+    input2 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_S1_qmmm.log'
+    input3 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_T1_qmmm.log'
     calc1  = get_calc(input1)
-    d1 = calc1.get_distance_list(1,31)[-1]
-    a1 = calc1.get_angle_list(5,1,2)[0]
+    d1 = calc1.get_distance_list(1,31)
     calc2  = get_calc(input2)
-    d2 = calc2.get_distance_list(1,31)[-1]
-    a2 = calc2.get_angle_list(5,1,2)[0]
-    print (f'{d1:.3f}', f'{d2:.3f}')
-    print (f'{a1:.3f}', f'{a2:.3f}')
+    d2 = calc2.get_distance_list(1,31)[:-2]
+    calc3  = get_calc(input3)
+    d3 = calc3.get_distance_list(1,31)
+
+    x1 = range (1, len(d1) + 1)
+    plt.plot(x1, d1, marker='.', markersize='2', linewidth=0.5, color='black')
+    plt.ylim(3.3, 3.6)
+    plt.axhline(y=d1[-1], color='r', linestyle=':', label=f'{d1[-1]:.3f}')
+    plt.title(r'S0 (CAM-B3lYP/6-31G**+Lanl2dz)')
+    plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
+    plt.legend()
+    plt.xlabel(r'Iteration number')
+    plt.ylabel(r'Rh...Rh distance / A')
+    plt.savefig('S0.png', dpi = 600)
+    plt.close()
+
+    x2 = range (1, len(d2) + 1)
+    plt.plot(x2, d2, marker='.', markersize='2', linewidth=0.5, color='black')
+    plt.ylim(3.0, 3.5)
+    plt.axhline(y=d2[-1], color='r', linestyle=':', label=f'{d2[-1]:.3f}')
+    plt.title(r'S1 (CAM-B3lYP/6-31G**+Lanl2dz)')
+    plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
+    plt.legend()
+    plt.xlabel(r'Iteration number')
+    plt.ylabel(r'Rh...Rh distance / A')
+    plt.savefig('S1.png', dpi = 600)
+    plt.close()
+
+    x3 = range (1, len(d3) + 1)
+    plt.plot(x3, d3, marker='.', markersize='2', linewidth=0.5, color='black')
+    plt.ylim(3.1, 3.4)
+    plt.axhline(y=d3[-1], color='r', linestyle=':', label=f'{d3[-1]:.3f}')
+    plt.title(r'T1 (CAM-B3lYP/6-31G**+Lanl2dz)')
+    plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
+    plt.legend()
+    plt.xlabel(r'Iteration number')
+    plt.ylabel(r'Rh...Rh distance / A')
+    plt.savefig('T1.png', dpi = 600)
+    plt.close()
