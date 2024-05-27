@@ -44,7 +44,7 @@ class Molecule:
         atom_list_raw = []
         for atom in self.get_atom_list():
             atom_raw_xyz = tuple(at_sh_coord + sh_vec_coord for at_sh_coord, sh_vec_coord in zip (atom.xyz, shift_vec))
-            atom_raw = Atom(*atom_raw_xyz, at_id=atom.at_id)
+            atom_raw = Atom(*atom_raw_xyz, name=atom.name, at_id=atom.at_id)
             atom_list_raw.append(atom_raw)
         mol_raw = Molecule (atoms=atom_list_raw, mol_id=self.mol_id)
         mol_raw.set_coordinate_type('raw')
@@ -98,6 +98,13 @@ class Optimization:
         all_mols.insert(0, self.initial_mol_shifted)
         all_mols.append(self.final_mol_shifted)
         return (all_mols)
+    def save_xyz_at_step(self, step_nb:int, output_path:os.PathLike) -> None:
+        nb_atoms = len(self.initial_mol_raw.get_atom_list())
+        mol = self.get_mol_list()[step_nb]
+        with open(output_path, '+w') as f:
+            f.write(f'{str(nb_atoms)}\n')
+            for atom in mol.get_atom_list():
+                f.write(f'{atom.name} {atom.xyz[0]:.6f} {atom.xyz[1]:.6f} {atom.xyz[2]:.6f}\n')
     
 def parse_intermediate_atomic_line(line:str) -> Atom:
     line = line.strip(r'\n')
@@ -109,7 +116,7 @@ def parse_initial_atomic_line(line:str) -> Atom:
     line = line.strip(r'\n')
     #check if QMMM or isolOpt:
     if re.findall('--', line):
-        at_name = line.split('--')[0]
+        at_name = line.split('--')[0].split()[0]
         atom_xyz = line.split()[2:5]
     else:
         at_name = line.split()[0]
@@ -205,48 +212,50 @@ def angle(r1:tuple[float,float,float], r2:tuple[float,float,float], r3:tuple[flo
     return acos(dot_product(v1, v2) / (vec_length(v1) * vec_length(v2)))
 
 if __name__ == '__main__':
-    input1 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_S0_qmmm.log'
-    input2 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_S1_qmmm.log'
-    input3 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_T1_qmmm.log'
-    calc1  = get_calc(input1)
-    d1 = calc1.get_distance_list(1,31)
-    calc2  = get_calc(input2)
-    d2 = calc2.get_distance_list(1,31)[:-2]
-    calc3  = get_calc(input3)
-    d3 = calc3.get_distance_list(1,31)
+    input_s0 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_S0_qmmm.log'
+    input_s1 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_S1_qmmm.log'
+    input_t1 = r'C:\Users\piotr\Documents\VS_Code\qmmm_dist\files\cam_6311_lan_T1_qmmm.log'
+    calc_s0  = get_calc(input_s0)
+    calc_s1  = get_calc(input_s1)
+    calc_t1  = get_calc(input_t1)
+    calc_s0.save_xyz_at_step(output_path='s0_final.xyz', step_nb=-1)
+    calc_s1.save_xyz_at_step(output_path='s1_final.xyz', step_nb=-3)
+    calc_t1.save_xyz_at_step(output_path='t1_final.xyz', step_nb=-1)
 
-    x1 = range (1, len(d1) + 1)
-    plt.plot(x1, d1, marker='.', markersize='2', linewidth=0.5, color='black')
-    plt.ylim(3.3, 3.6)
-    plt.axhline(y=d1[-1], color='r', linestyle=':', label=f'{d1[-1]:.3f}')
-    plt.title(r'S0 (CAM-B3lYP/6-31G**+Lanl2dz)')
-    plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
-    plt.legend()
-    plt.xlabel(r'Iteration number')
-    plt.ylabel(r'Rh...Rh distance / A')
-    plt.savefig('S0.png', dpi = 600)
-    plt.close()
 
-    x2 = range (1, len(d2) + 1)
-    plt.plot(x2, d2, marker='.', markersize='2', linewidth=0.5, color='black')
-    plt.ylim(3.0, 3.5)
-    plt.axhline(y=d2[-1], color='r', linestyle=':', label=f'{d2[-1]:.3f}')
-    plt.title(r'S1 (CAM-B3lYP/6-31G**+Lanl2dz)')
-    plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
-    plt.legend()
-    plt.xlabel(r'Iteration number')
-    plt.ylabel(r'Rh...Rh distance / A')
-    plt.savefig('S1.png', dpi = 600)
-    plt.close()
 
-    x3 = range (1, len(d3) + 1)
-    plt.plot(x3, d3, marker='.', markersize='2', linewidth=0.5, color='black')
-    plt.ylim(3.1, 3.4)
-    plt.axhline(y=d3[-1], color='r', linestyle=':', label=f'{d3[-1]:.3f}')
-    plt.title(r'T1 (CAM-B3lYP/6-31G**+Lanl2dz)')
-    plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
-    plt.legend()
-    plt.xlabel(r'Iteration number')
-    plt.ylabel(r'Rh...Rh distance / A')
-    plt.savefig('T1.png', dpi = 600)
-    plt.close()
+    # x1 = range (1, len(d1) + 1)
+    # plt.plot(x1, d1, marker='.', markersize='2', linewidth=0.5, color='black')
+    # plt.ylim(3.3, 3.6)
+    # plt.axhline(y=d1[-1], color='r', linestyle=':', label=f'{d1[-1]:.3f}')
+    # plt.title(r'S0 (CAM-B3lYP/6-31G**+Lanl2dz)')
+    # plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
+    # plt.legend()
+    # plt.xlabel(r'Iteration number')
+    # plt.ylabel(r'Rh...Rh distance / A')
+    # plt.savefig('S0.png', dpi = 600)
+    # plt.close()
+
+    # x2 = range (1, len(d2) + 1)
+    # plt.plot(x2, d2, marker='.', markersize='2', linewidth=0.5, color='black')
+    # plt.ylim(3.0, 3.5)
+    # plt.axhline(y=d2[-1], color='r', linestyle=':', label=f'{d2[-1]:.3f}')
+    # plt.title(r'S1 (CAM-B3lYP/6-31G**+Lanl2dz)')
+    # plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
+    # plt.legend()
+    # plt.xlabel(r'Iteration number')
+    # plt.ylabel(r'Rh...Rh distance / A')
+    # plt.savefig('S1.png', dpi = 600)
+    # plt.close()
+
+    # x3 = range (1, len(d3) + 1)
+    # plt.plot(x3, d3, marker='.', markersize='2', linewidth=0.5, color='black')
+    # plt.ylim(3.1, 3.4)
+    # plt.axhline(y=d3[-1], color='r', linestyle=':', label=f'{d3[-1]:.3f}')
+    # plt.title(r'T1 (CAM-B3lYP/6-31G**+Lanl2dz)')
+    # plt.grid(which='major', linestyle='-.', color='grey', alpha=0.3)
+    # plt.legend()
+    # plt.xlabel(r'Iteration number')
+    # plt.ylabel(r'Rh...Rh distance / A')
+    # plt.savefig('T1.png', dpi = 600)
+    # plt.close()
